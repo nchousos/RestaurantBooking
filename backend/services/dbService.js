@@ -18,8 +18,8 @@ const getAllRestaurants = async () => {
   return rows;
 };
 
-// Optional: Get restaurant by ID
-const getRestaurantById = async (id, date) => { // Add date parameter
+
+const getRestaurantById = async (id, date) => { 
   const rows = await pool.query(`
     SELECT 
       r.restaurant_id,
@@ -112,6 +112,21 @@ const getTotalPeopleAtTimeslot = async (restaurant_id, date, excludeReservationI
   return result[0].total || 0;
 };
 
+const getTotalPeopleForDay = async (restaurant_id, date, excludeReservationId = null) => {
+  let query = `
+    SELECT SUM(people_count) AS total 
+    FROM reservations 
+    WHERE restaurant_id = ? AND date = ?`;
+  const params = [restaurant_id, date];
+
+  if (excludeReservationId) {
+    query += ' AND reservation_id != ?';
+    params.push(excludeReservationId);
+  }
+
+  const [result] = await pool.query(query, params);
+  return result[0].total || 0;
+};
 
 const insertReservation = async (user_id, restaurant_id, date, time, people_count,uuid) => {
   return await pool.query(
@@ -201,6 +216,7 @@ module.exports = {
   fetchReservations,
   fetchRestaurantById,
   getTotalPeopleAtTimeslot,
+  getTotalPeopleForDay,
   insertReservation,
   getUserReservationsFromDb,
   deleteReservationFromDb,

@@ -12,7 +12,7 @@ const {
 
 router.post('/',           authenticate, createReservation);
 
-// Get current user’s reservations
+
 router.get('/',            authenticate, getReservations);
 
 // Delete one of the user’s reservations

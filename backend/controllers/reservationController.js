@@ -13,7 +13,6 @@ const {
 
 const TIME_REGEX = /^\d{2}:\d{2}$/;
 
-
 const getReservations = async (req, res) => {
   try {
     const { restaurant_id, date, time } = req.query;
@@ -135,6 +134,7 @@ const updateReservation = async (req, res) => {
   }
 
   const formattedTime = `${time}:00`;
+  const newPeopleCount = Number(people_count); // Ensure number
 
   try {
     const reservation = await getReservationByIdForUser(reservation_id, user_id);
@@ -150,26 +150,38 @@ const updateReservation = async (req, res) => {
     const rTime = new Date(`1970-01-01T${formattedTime}`);
     const oTime = new Date(`1970-01-01T${restaurant.opening_time}`);
     const cTime = new Date(`1970-01-01T${restaurant.closing_time}`);
+
     if (rTime < oTime || rTime > cTime) {
       return res.status(400).json({
         message: `Restaurant open ${restaurant.opening_time}–${restaurant.closing_time}`
       });
     }
 
-    
-    const totalPeople = await getTotalPeopleAtTimeslot(restaurant_id, date, formattedTime, reservation_id);
-    const available = restaurant.capacity - totalPeople;
+    // DEBUG: current reservation before update
+    console.log('Previous Reservation:', reservation);
+    console.log('Requested new people_count:', newPeopleCount);
 
+    // Get total people for the day (INCLUDING current reservation)
+    const totalPeopleIncludingCurrent = await getTotalPeopleAtTimeslot(restaurant_id, date, null); // don't exclude current
     const oldPeopleCount = reservation.people_count;
-    const extraSeatsNeeded = people_count - oldPeopleCount;
+    const updatedTotal = totalPeopleIncludingCurrent - oldPeopleCount + newPeopleCount;
+    const capacity = Number(restaurant.capacity);
 
-    if (extraSeatsNeeded > available) {
+    console.log('Restaurant capacity:', capacity);
+    console.log('People already reserved (including current):', totalPeopleIncludingCurrent);
+    console.log('Old people count:', oldPeopleCount);
+    console.log('Extra seats needed:', newPeopleCount - oldPeopleCount);
+    console.log('New total after update:', updatedTotal);
+
+    if (updatedTotal > capacity) {
+      console.log('Not enough seats. Rejecting update.');
       return res.status(400).json({
-        message: `Only ${available} seats available, you requested ${people_count}`
+        message: `Only ${capacity - (totalPeopleIncludingCurrent - oldPeopleCount)} seats available, you requested ${newPeopleCount}`
       });
     }
 
-    await updateReservationInDb(reservation_id, date, formattedTime, people_count);
+    console.log('Update is valid. Proceeding with DB update...');
+    await updateReservationInDb(reservation_id, date, formattedTime, newPeopleCount);
 
     res.json({ message: 'Reservation updated' });
   } catch (err) {
@@ -177,6 +189,7 @@ const updateReservation = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 
 module.exports = { createReservation, getReservations, deleteReservation, updateReservation, getUserReservations };

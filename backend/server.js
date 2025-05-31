@@ -8,7 +8,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
-const port = 3010; // Μπορείς να το αλλάξεις αν χρειάζεται
+const port = 3010; 
 
 const authRoutes = require('./src/routes/auth');
 const restaurantRoutes = require('./src/routes/restaurants');
@@ -27,12 +27,12 @@ app.use('/reservations', reservationRoutes);
 
 app.use('/user', userRoutes); 
 
-// Επιστροφή μηνύματος όταν το API είναι διαθέσιμο
+
 app.get('/users', async (req, res) => {
     let conn;
     try {
       conn = await pool.getConnection();
-      // Επιλέγουμε user_id, name, email (μην στείλεις το password!)
+      
       const rows = await conn.query('SELECT user_id, name, email FROM users');
       res.status(200).json(rows);
     } catch (err) {
